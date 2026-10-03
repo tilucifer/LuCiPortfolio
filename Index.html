@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LuCiPortfolio</title>
+  <style>
+    :root {
+      --ink: #18243a;
+      --muted: #7e899b;
+      --line: #e8edf3;
+      --paper: #ffffff;
+      --canvas: #f5f7fa;
+      --navy: #172943;
+      --navy-soft: #243b5b;
+      --blue: #4779ed;
+      --blue-soft: #edf3ff;
+      --mint: #e9f7f0;
+      --green: #287a57;
+      --amber: #fff4dc;
+      --shadow: 0 12px 36px rgba(26, 43, 69, .08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app-shell { min-height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }
+    .sidebar { position: sticky; top: 0; height: 100vh; padding: 27px 17px 20px; display: flex; flex-direction: column; color: #e9f0fa; background: var(--navy); }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 33px; }
+    .brand-mark { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 13px; color: #fff; background: linear-gradient(145deg, #88aaff, #4b79ef); font-family: Georgia, serif; font-size: 22px; font-weight: 700; box-shadow: 0 7px 18px rgba(59, 105, 221, .32); }
+    .brand-name { font-size: 17px; letter-spacing: -.6px; font-weight: 700; }
+    .brand-sub { margin-top: 1px; color: #91a2bb; font-size: 10px; letter-spacing: 1.45px; text-transform: uppercase; }
+    .nav-label { padding: 0 12px 10px; color: #8092ac; font-size: 10px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; }
+    .nav-list { display: grid; gap: 5px; }
+    .nav-item { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 0; border-radius: 10px; color: #b3c1d3; background: transparent; text-align: left; transition: .18s ease; }
+    .nav-item:hover { color: white; background: rgba(255,255,255,.07); }
+    .nav-item.active { color: #fff; background: #2c4467; box-shadow: inset 3px 0 #82a5ff; }
+    .nav-icon { width: 19px; text-align: center; font-size: 16px; }
+    .sidebar-bottom { margin-top: auto; padding: 15px 11px 3px; border-top: 1px solid rgba(255,255,255,.1); color: #92a4bc; font-size: 11px; }
+    .sidebar-bottom strong { display: block; margin-bottom: 4px; color: #dce6f4; font-size: 12px; }
+    .workspace { min-width: 0; padding: 0 42px 54px; }
+    .topbar { height: 78px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e9edf3; }
+    .crumb { color: #8a95a5; font-size: 12px; }
+    .crumb strong { color: #394960; font-weight: 600; }
+    .profile-chip { display: flex; align-items: center; gap: 9px; padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: 30px; color: #47556a; background: #fff; font-size: 12px; }
+    .profile-avatar { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; color: #3e64bb; background: #e8efff; font-size: 11px; font-weight: 700; }
+    .page { max-width: 1420px; margin: 0 auto; padding-top: 32px; }
+    .eyebrow { margin: 0 0 7px; color: #8491a4; font-size: 10px; font-weight: 700; letter-spacing: 1.55px; text-transform: uppercase; }
+    h1 { margin: 0; color: #1b2940; font-size: clamp(25px, 3vw, 32px); line-height: 1.17; letter-spacing: -1.05px; }
+    .page-intro { margin: 9px 0 0; color: #7d8999; font-size: 13px; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
+    .heading-actions { display: flex; gap: 9px; }
+    .button { min-height: 39px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border: 1px solid transparent; border-radius: 9px; color: white; background: var(--blue); box-shadow: 0 4px 10px rgba(71,121,237,.18); font-size: 12px; font-weight: 650; transition: .15s ease; }
+    .button:hover { transform: translateY(-1px); background: #396be0; }
+    .button.secondary { color: #526174; border-color: #dfe6ee; background: #fff; box-shadow: none; }
+    .button.secondary:hover { background: #f9fbfd; }
+    .button.small { min-height: 32px; padding: 0 11px; font-size: 11px; }
+    .button.ghost { min-height: 30px; padding: 0 9px; color: #607088; background: transparent; box-shadow: none; }
+    .button.ghost:hover { color: #315fc0; background: var(--blue-soft); }
+    .button:disabled { cursor: wait; opacity: .65; transform: none; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 23px; }
+    .stat-card { position: relative; min-height: 131px; padding: 21px 22px; overflow: hidden; border: 1px solid #edf0f4; border-radius: 13px; background: var(--paper); box-shadow: 0 4px 15px rgba(34,51,75,.025); }
+    .stat-label { color: #758297; font-size: 12px; font-weight: 550; }
+    .stat-value { margin-top: 10px; font-size: 31px; line-height: 1; letter-spacing: -1.4px; font-weight: 700; }
+    .stat-foot { margin-top: 10px; color: #9aa4b1; font-size: 11px; }
+    .stat-icon { position: absolute; top: 20px; right: 21px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; color: #4e78db; background: #eff4ff; font-size: 16px; }
+    .stat-card:nth-child(2) .stat-icon { color: #2c8d65; background: #e9f7f0; }
+    .stat-card:nth-child(3) .stat-icon { color: #ad7c24; background: #fff5df; }
+    .home-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .8fr); gap: 17px; }
+    .panel { border: 1px solid #e9edf2; border-radius: 13px; background: #fff; box-shadow: 0 4px 16px rgba(34,51,75,.025); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 19px 21px; border-bottom: 1px solid #eff2f5; }
+    .panel-title { margin: 0; font-size: 14px; font-weight: 700; }
+    .panel-subtitle { margin-top: 3px; color: #8995a5; font-size: 11px; }
+    .quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; padding: 18px 20px 20px; }
+    .quick-action { display: flex; align-items: center; gap: 12px; min-height: 65px; padding: 11px; border: 1px solid #edf0f4; border-radius: 10px; color: inherit; background: #fff; text-align: left; transition: .15s; }
+    .quick-action:hover { border-color: #cad8fb; background: #fafcff; transform: translateY(-1px); }
+    .quick-icon { width: 35px; height: 35px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; color: #4d77db; background: #eff4ff; font-size: 15px; }
+    .quick-title { display: block; font-size: 12px; font-weight: 650; }
+    .quick-caption { display: block; margin-top: 2px; color: #8995a5; font-size: 10px; }
+    .recent-list { padding: 3px 20px 13px; }
+    .recent-item { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #f0f2f5; }
+    .recent-item:last-child { border-bottom: 0; }
+    .recent-avatar { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; color: #526caa; background: #edf2ff; font-size: 10px; font-weight: 700; }
+    .recent-name { font-size: 11px; font-weight: 650; }
+    .recent-meta { margin-top: 2px; color: #8995a5; font-size: 10px; }
+    .empty-state { padding: 24px; color: #929eae; font-size: 12px; text-align: center; }
+    .filter-panel { padding: 15px; margin-bottom: 14px; }
+    .filters { display: grid; grid-template-columns: minmax(190px, 1.65fr) repeat(4, minmax(130px, 1fr)); gap: 9px; }
+    .field-wrap { position: relative; min-width: 0; }
+    .field-wrap.search:before { content: '⌕'; position: absolute; top: 7px; left: 12px; color: #8e9aae; font-size: 21px; line-height: 1; }
+    .control, .select-control, .textarea-control { width: 100%; min-height: 38px; padding: 0 11px; border: 1px solid #e1e7ee; border-radius: 8px; outline: none; color: #36455a; background: #fff; font-size: 11px; transition: .15s; }
+    .field-wrap.search .control { padding-left: 34px; }
+    .control:focus, .select-control:focus, .textarea-control:focus { border-color: #89a7f3; box-shadow: 0 0 0 3px rgba(71,121,237,.1); }
+    .control::placeholder, .textarea-control::placeholder { color: #a0aab7; }
+    .selection-bar { display: none; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; padding: 10px 13px; border: 1px solid #d9e5ff; border-radius: 9px; color: #4565ac; background: #f2f6ff; font-size: 11px; }
+    .selection-bar.visible { display: flex; }
+    .selection-actions { display: flex; align-items: center; gap: 8px; }
+    .table-panel { overflow: hidden; }
+    .table-scroll { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    th { padding: 12px 13px; color: #8591a2; background: #fafbfd; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: .65px; text-transform: uppercase; }
+    td { padding: 13px; border-top: 1px solid #f0f2f5; color: #59677b; font-size: 11px; }
+    tr:hover td { background: #fcfdff; }
+    .contact-name { color: #26364d; font-size: 11px; font-weight: 680; }
+    .cell-sub { margin-top: 3px; color: #9aa4b2; font-size: 10px; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 4px; max-width: 240px; white-space: normal; }
+    .tag { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 20px; color: #5b6a80; background: #f0f3f7; font-size: 9px; }
+    .tag.blue { color: #476ac1; background: #edf3ff; }
+    .tag.green { color: #348362; background: #ebf7f0; }
+    .tag.amber { color: #a4792f; background: #fff5df; }
+    .checkbox { width: 15px; height: 15px; accent-color: var(--blue); vertical-align: middle; cursor: pointer; }
+    .table-footer { display: flex; justify-content: space-between; gap: 12px; padding: 12px 15px; border-top: 1px solid #eef1f5; color: #96a1af; font-size: 10px; }
+    .show-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .show-card { padding: 17px; border: 1px solid #e9edf2; border-radius: 12px; background: white; transition: .16s; }
+    .show-card:hover { border-color: #d5def1; box-shadow: 0 6px 22px rgba(33,51,79,.055); transform: translateY(-1px); }
+    .show-top { display: flex; justify-content: space-between; gap: 12px; }
+    .show-title { margin: 0; color: #28384e; font-size: 13px; font-weight: 700; }
+    .show-company { margin-top: 5px; color: #8490a1; font-size: 11px; }
+    .show-card .tag { margin-top: 14px; }
+    .show-edit { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; text-align: right; }
+    .show-filters { display: grid; grid-template-columns: minmax(250px, 1fr) 200px; gap: 9px; margin-bottom: 15px; }
+    .import-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(270px, .8fr); gap: 17px; align-items: start; }
+    .form-panel { padding: 22px; }
+    .form-panel h2 { margin: 0; font-size: 15px; }
+    .form-panel > p { margin: 6px 0 20px; color: #8490a0; font-size: 11px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-field { min-width: 0; }
+    .form-field.full { grid-column: 1 / -1; }
+    .form-field label, .form-label { display: block; margin-bottom: 6px; color: #536177; font-size: 11px; font-weight: 650; }
+    .form-field .control, .form-field .select-control { min-height: 41px; font-size: 12px; }
+    .textarea-control { min-height: 84px; padding: 10px 11px; resize: vertical; font-size: 12px; }
+    .checkline { display: flex; flex-wrap: wrap; gap: 9px 16px; padding-top: 5px; }
+    .check-option { display: flex; align-items: center; gap: 7px; color: #647188; font-size: 11px; }
+    .import-aside { padding: 21px; border: 1px solid #e5ebf4; border-radius: 12px; background: linear-gradient(150deg, #f1f5ff, #fff 80%); }
+    .aside-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; color: #4772d4; background: #e6edff; font-size: 16px; }
+    .import-aside h3 { margin: 14px 0 7px; font-size: 14px; }
+    .import-aside p, .import-aside li { color: #77859a; font-size: 11px; line-height: 1.65; }
+    .import-aside ul { padding-left: 18px; margin: 8px 0 0; }
+    .notice { margin-top: 16px; padding: 11px 12px; border-radius: 8px; color: #5570ac; background: #eaf0ff; font-size: 10px; line-height: 1.6; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; padding: 22px; background: rgba(18, 31, 50, .42); backdrop-filter: blur(3px); }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(760px, 100%); max-height: min(90vh, 850px); overflow: hidden; border-radius: 14px; background: white; box-shadow: 0 24px 80px rgba(11, 25, 44, .25); animation: rise .18s ease-out; }
+    .modal.narrow { width: min(440px, 100%); }
+    @keyframes rise { from { opacity: .4; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 20px 23px 16px; border-bottom: 1px solid #edf0f4; }
+    .modal-header h2 { margin: 0; font-size: 17px; letter-spacing: -.3px; }
+    .modal-header p { margin: 4px 0 0; color: #8a95a4; font-size: 11px; }
+    .close-button { width: 29px; height: 29px; border: 0; border-radius: 8px; color: #7c8898; background: #f3f5f8; font-size: 18px; line-height: 1; }
+    .modal-body { max-height: calc(90vh - 143px); overflow-y: auto; padding: 20px 23px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 23px; border-top: 1px solid #edf0f4; background: #fcfdfe; }
+    .show-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .picker-box { padding: 12px; border: 1px solid #e8edf2; border-radius: 9px; }
+    .picker-title { margin: 0 0 9px; color: #41516a; font-size: 11px; font-weight: 700; }
+    .picker-list { display: grid; gap: 6px; max-height: 112px; overflow-y: auto; }
+    .picker-empty { color: #a1aab6; font-size: 10px; }
+    .modal-divider { grid-column: 1 / -1; height: 1px; margin: 2px 0; background: #edf0f4; }
+    .toast { position: fixed; z-index: 30; right: 24px; bottom: 22px; max-width: min(440px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 10px; color: #fff; background: #233d5e; box-shadow: 0 10px 30px rgba(17, 32, 52, .22); font-size: 12px; opacity: 0; pointer-events: none; transform: translateY(10px); transition: .22s; }
+    .toast.show { opacity: 1; transform: none; }
+    .toast.error { background: #a23d43; }
+    .loading { padding: 70px 20px; color: #8490a2; text-align: center; }
+    .loading-dot { display: inline-block; width: 8px; height: 8px; margin: 0 2px; border-radius: 50%; background: #7294ec; animation: pulse 1s infinite alternate; }
+    .loading-dot:nth-child(2) { animation-delay: .2s; }.loading-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes pulse { to { opacity: .25; transform: scale(.7); } }
+    @media (max-width: 1050px) {
+      .workspace { padding-right: 25px; padding-left: 25px; }
+      .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .show-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 740px) {
+      .app-shell { display: block; }
+      .sidebar { position: relative; width: 100%; height: auto; padding: 12px 14px; }
+      .brand { padding: 0 4px 11px; }
+      .brand-mark { width: 32px; height: 32px; font-size: 18px; }
+      .brand-name { font-size: 15px; }
+      .brand-sub, .nav-label, .sidebar-bottom { display: none; }
+      .nav-list { display: flex; overflow-x: auto; gap: 4px; }
+      .nav-item { width: auto; flex: 0 0 auto; padding: 8px 10px; font-size: 11px; }
+      .nav-item.active { box-shadow: inset 0 -2px #82a5ff; }
+      .nav-icon { font-size: 13px; }
+      .workspace { padding: 0 16px 35px; }
+      .topbar { height: 54px; }
+      .profile-chip { padding-right: 6px; }.profile-chip span:last-child { display: none; }
+      .page { padding-top: 25px; }
+      .page-heading { align-items: flex-start; flex-direction: column; margin-bottom: 19px; }
+      .heading-actions { width: 100%; }.heading-actions .button { flex: 1; }
+      .stat-grid { gap: 8px; }.stat-card { min-height: 112px; padding: 15px; }.stat-icon { top: 13px; right: 13px; width: 30px; height: 30px; }.stat-label { max-width: 72px; font-size: 10px; }.stat-value { font-size: 26px; }.stat-foot { font-size: 9px; }
+      .home-grid, .import-layout { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters .field-wrap.search { grid-column: 1 / -1; }
+      .show-filters { grid-template-columns: 1fr; }
+      .show-grid { grid-template-columns: 1fr; }
+      .quick-grid { grid-template-columns: 1fr 1fr; padding: 13px; }
+      .quick-action { padding: 9px; }.quick-icon { width: 30px; height: 30px; }
+      .form-grid { grid-template-columns: 1fr; }.form-field.full { grid-column: auto; }
+      .show-pickers { grid-template-columns: 1fr; }
+      .selection-bar { align-items: flex-start; flex-direction: column; }
+      .selection-actions { width: 100%; }.selection-actions .button { flex: 1; }
+      .modal-backdrop { padding: 10px; }.modal-header { padding: 17px 17px 13px; }.modal-body { padding: 16px 17px; }.modal-footer { padding: 11px 17px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">L</div>
+        <div><div class="brand-name">LuCiPortfolio</div><div class="brand-sub">Carnet de programmation</div></div>
+      </div>
+      <div class="nav-label">Espace de travail</div>
+      <nav class="nav-list" aria-label="Navigation principale">
+        <button class="nav-item active" data-page="home"><span class="nav-icon">⌂</span>Accueil</button>
+        <button class="nav-item" data-page="contacts"><span class="nav-icon">♙</span>Contacts</button>
+        <button class="nav-item" data-page="spectacles"><span class="nav-icon">✳</span>Spectacles</button>
+        <button class="nav-item" data-page="import"><span class="nav-icon">↥</span>Importer</button>
+      </nav>
+      <div class="sidebar-bottom"><strong>Votre réseau culturel</strong>Contacts, programmations et spectacles réunis au même endroit.</div>
+    </aside>
+    <main class="workspace">
+      <header class="topbar">
+        <div class="crumb">LuCiPortfolio <span aria-hidden="true"> / </span> <strong id="crumb-current">Accueil</strong></div>
+        <div class="profile-chip"><div class="profile-avatar">LC</div><span>Mon espace</span></div>
+      </header>
+      <div id="main-content" class="page"><div class="loading">Chargement des données <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div></div>
+    </main>
+  </div>
+  <div id="modal-root" class="modal-backdrop" role="dialog" aria-modal="true"></div>
+  <div id="toast" class="toast" role="status"></div>
+  <script>
+    const state = { page: 'home', setupRequired: false, contacts: [], spectacles: [], contactQuery: '', department: '', audience: '', contactShow: '', showQuery: '', showCategory: '', selected: new Set() };
+    const PAGE_NAMES = { home: 'Accueil', contacts: 'Contacts', spectacles: 'Spectacles', import: 'Importer' };
+    const main = document.getElementById('main-content');
+    const modalRoot = document.getElementById('modal-root');
+    let toastTimer;
+
+    document.querySelectorAll('.nav-item').forEach(button => button.addEventListener('click', () => navigate(button.dataset.page)));
+    main.addEventListener('click', handleMainClick);
+    main.addEventListener('input', handleMainInput);
+    main.addEventListener('change', handleMainChange);
+    main.addEventListener('submit', handleMainSubmit);
+    modalRoot.addEventListener('click', handleModalClick);
+    modalRoot.addEventListener('submit', handleModalSubmit);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
+
+    function callServer(method, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(error => reject(new Error(error && error.message ? error.message : String(error))))[method](...args);
+      });
+    }
+
+    async function loadData() {
+      try {
+        const data = await callServer('getAppData');
+        state.setupRequired = Boolean(data.setupRequired);
+        state.contacts = data.contacts || [];
+        state.spectacles = data.spectacles || [];
+        render();
+      } catch (error) {
+        main.innerHTML = `<div class="panel empty-state"><strong>Impossible de charger les données</strong><br>${escapeHtml(error.message)}<br><br>Vérifiez que le projet Apps Script est lié au Google Sheet.</div>`;
+      }
+    }
+
+    function navigate(page) {
+      state.page = page;
+      document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === page));
+      document.getElementById('crumb-current').textContent = PAGE_NAMES[page] || 'Accueil';
+      render();
+    }
+
+    function render() {
+      if (state.setupRequired) { renderSetup(); return; }
+      if (state.page === 'contacts') renderContacts();
+      else if (state.page === 'spectacles') renderSpectacles();
+      else if (state.page === 'import') renderImport();
+      else renderHome();
+    }
+
+    function renderSetup() {
+      main.innerHTML = `<section class="page-heading"><div><p class="eyebrow">Première configuration</p><h1>Connecter votre Google Sheet</h1><p class="page-intro">Choisissez le fichier qui stockera les contacts, les spectacles et les listes d’emails.</p></div></section><section class="import-layout"><article class="panel form-panel"><h2>Votre fichier de données</h2><p>Collez l’URL complète ou l’identifiant du Google Sheet. Les trois onglets LuCiPortfolio seront créés automatiquement.</p><form id="setup-form"><div class="form-grid"><div class="form-field full"><label for="database-sheet">URL ou identifiant du Google Sheet</label><input class="control" id="database-sheet" name="spreadsheetId" required placeholder="https://docs.google.com/spreadsheets/d/…"></div><div class="form-field full"><button class="button" type="submit">Connecter le fichier</button></div></div></form></article><aside class="import-aside"><div class="aside-icon">▤</div><h3>Une base dédiée</h3><p>LuCiPortfolio crée et utilise les onglets Contacts, Spectacles et Listes emails dans ce fichier.</p><div class="notice">Le compte utilisé pour déployer l’application doit avoir accès en modification à ce Google Sheet.</div></aside></section>`;
+    }
+
+    function renderHome() {
+      const youthCount = state.contacts.filter(contact => contact.jeunePublic).length;
+      const recent = [...state.contacts].slice(-5).reverse();
+      main.innerHTML = `
+        <section class="page-heading"><div><p class="eyebrow">Votre espace de programmation</p><h1>Bonjour, bienvenue.</h1><p class="page-intro">Retrouvez votre réseau et les spectacles associés en un coup d’œil.</p></div><div class="heading-actions"><button class="button" data-action="new-contact">＋ Ajouter un contact</button></div></section>
+        <section class="stat-grid">
+          <article class="stat-card"><div class="stat-label">Contacts enregistrés</div><div class="stat-value">${state.contacts.length}</div><div class="stat-foot">Votre carnet professionnel</div><div class="stat-icon">♙</div></article>
+          <article class="stat-card"><div class="stat-label">Spectacles au catalogue</div><div class="stat-value">${state.spectacles.length}</div><div class="stat-foot">Compagnies et créations</div><div class="stat-icon">✳</div></article>
+          <article class="stat-card"><div class="stat-label">Programmateurs jeune public</div><div class="stat-value">${youthCount}</div><div class="stat-foot">Contacts déclarés</div><div class="stat-icon">✦</div></article>
+        </section>
+        <section class="home-grid">
+          <article class="panel"><div class="panel-head"><div><h2 class="panel-title">Accès rapide</h2><div class="panel-subtitle">Les actions que vous utilisez le plus souvent</div></div></div>
+            <div class="quick-grid">
+              <button class="quick-action" data-action="new-contact"><span class="quick-icon">＋</span><span><span class="quick-title">Ajouter un contact</span><span class="quick-caption">Créer une nouvelle fiche</span></span></button>
+              <button class="quick-action" data-page="contacts"><span class="quick-icon">☷</span><span><span class="quick-title">Parcourir les contacts</span><span class="quick-caption">Filtrer et rechercher</span></span></button>
+              <button class="quick-action" data-action="new-show"><span class="quick-icon">✳</span><span><span class="quick-title">Ajouter un spectacle</span><span class="quick-caption">Enrichir votre catalogue</span></span></button>
+              <button class="quick-action" data-page="import"><span class="quick-icon">↥</span><span><span class="quick-title">Importer des contacts</span><span class="quick-caption">Depuis un autre Google Sheet</span></span></button>
+            </div>
+          </article>
+          <article class="panel"><div class="panel-head"><div><h2 class="panel-title">Contacts du carnet</h2><div class="panel-subtitle">Les derniers contacts ajoutés</div></div><button class="button ghost" data-page="contacts">Tout voir →</button></div>
+            <div class="recent-list">${recent.length ? recent.map(contact => `<div class="recent-item"><div class="recent-avatar">${escapeHtml(initials(contact))}</div><div><div class="recent-name">${escapeHtml(fullName(contact) || 'Contact sans nom')}</div><div class="recent-meta">${escapeHtml(contact.company || contact.email || contact.ville || 'Fiche contact')}</div></div></div>`).join('') : '<div class="empty-state">Votre carnet est encore vide.</div>'}</div>
+          </article>
+        </section>`;
+    }
+
+    function renderContacts() {
+      const departments = [...new Set(state.contacts.map(contact => contact.departement).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+      main.innerHTML = `
+        <section class="page-heading"><div><p class="eyebrow">Votre réseau</p><h1>Contacts</h1><p class="page-intro">${state.contacts.length} fiche${state.contacts.length > 1 ? 's' : ''} dans votre carnet de programmation.</p></div><div class="heading-actions"><button class="button secondary" data-page="import">↥ Importer</button><button class="button" data-action="new-contact">＋ Ajouter un contact</button></div></section>
+        <section class="panel filter-panel"><div class="filters">
+          <div class="field-wrap search"><input class="control" id="contact-search" name="contactSearch" placeholder="Rechercher un nom, email, ville…" value="${escapeAttr(state.contactQuery)}"></div>
+          <select class="select-control" id="department-filter"><option value="">Tous les départements</option>${departments.map(value => `<option ${value === state.department ? 'selected' : ''} value="${escapeAttr(value)}">${escapeHtml(value)}</option>`).join('')}</select>
+          <select class="select-control" id="audience-filter"><option value="">Tous les profils</option><option value="jeune" ${state.audience === 'jeune' ? 'selected' : ''}>Jeune public</option><option value="adulte" ${state.audience === 'adulte' ? 'selected' : ''}>Adultes</option><option value="rue" ${state.audience === 'rue' ? 'selected' : ''}>Spectacles de rue</option></select>
+          <select class="select-control" id="contact-show-filter"><option value="">Tous les spectacles</option>${state.spectacles.map(show => `<option value="${escapeAttr(show.id)}" ${state.contactShow === show.id ? 'selected' : ''}>${escapeHtml(show.nom)}</option>`).join('')}</select>
+          <select class="select-control" id="contact-sort" aria-label="Trier les contacts"><option value="">Trier : nom A–Z</option><option value="ville">Ville A–Z</option><option value="company">Structure A–Z</option></select>
+        </div></section>
+        <div id="selection-bar" class="selection-bar"><span><strong id="selection-count">0</strong> contact(s) sélectionné(s)</span><div class="selection-actions"><button class="button secondary small" data-action="clear-selection">Tout désélectionner</button><button class="button small" data-action="email-list">Créer une liste d’emails ↗</button></div></div>
+        <section class="panel table-panel"><div id="contact-results"></div></section>`;
+      renderContactRows();
+    }
+
+    function filteredContacts() {
+      const q = state.contactQuery.toLocaleLowerCase('fr').trim();
+      return state.contacts.filter(contact => {
+        const shows = [...(contact.spectaclesVus || []), ...(contact.spectaclesProgrammes || [])];
+        const haystack = [fullName(contact), contact.email, contact.company, contact.ville, contact.departement, contact.telephone, contact.commentaires, showNames(shows)].join(' ').toLocaleLowerCase('fr');
+        if (q && !haystack.includes(q)) return false;
+        if (state.department && contact.departement !== state.department) return false;
+        if (state.audience === 'jeune' && !contact.jeunePublic) return false;
+        if (state.audience === 'adulte' && !contact.adulte) return false;
+        if (state.audience === 'rue' && !contact.rue) return false;
+        if (state.contactShow && !shows.includes(state.contactShow)) return false;
+        return true;
+      }).sort((a, b) => {
+        const sort = document.getElementById('contact-sort')?.value;
+        if (sort === 'ville') return (a.ville || '').localeCompare(b.ville || '', 'fr');
+        if (sort === 'company') return (a.company || '').localeCompare(b.company || '', 'fr');
+        return fullName(a).localeCompare(fullName(b), 'fr');
+      });
+    }
+
+    function renderContactRows() {
+      const result = document.getElementById('contact-results');
+      if (!result) return;
+      const contacts = filteredContacts();
+      const allVisibleSelected = contacts.length > 0 && contacts.every(contact => state.selected.has(contact.id));
+      result.innerHTML = contacts.length ? `<div class="table-scroll"><table><thead><tr><th><input class="checkbox" type="checkbox" data-action="select-visible" aria-label="Sélectionner les contacts affichés" ${allVisibleSelected ? 'checked' : ''}></th><th>Contact</th><th>Structure</th><th>Localisation</th><th>Programmation</th><th>Spectacles associés</th><th></th></tr></thead><tbody>
+        ${contacts.map(contact => {
+          const tags = [contact.jeunePublic ? '<span class="tag green">Jeune public</span>' : '', contact.adulte ? '<span class="tag blue">Adultes</span>' : '', contact.rue ? '<span class="tag amber">Rue</span>' : ''].filter(Boolean).join('') || '<span class="cell-sub">Non renseigné</span>';
+          const shows = [...new Set([...(contact.spectaclesVus || []), ...(contact.spectaclesProgrammes || [])])];
+          return `<tr><td><input class="checkbox" type="checkbox" data-contact-check="${escapeAttr(contact.id)}" ${state.selected.has(contact.id) ? 'checked' : ''} aria-label="Sélectionner ${escapeAttr(fullName(contact))}"></td><td><div class="contact-name">${escapeHtml(fullName(contact) || 'Contact sans nom')}</div><div class="cell-sub">${escapeHtml(contact.email || '—')}</div></td><td>${escapeHtml(contact.company || '—')}</td><td>${escapeHtml([contact.ville, contact.departement].filter(Boolean).join(' · ') || '—')}</td><td><div class="tag-list">${tags}</div></td><td><div class="tag-list">${shows.length ? shows.slice(0, 3).map((id, index) => `<span class="tag ${index ? '' : 'blue'}">${escapeHtml(showName(id))}</span>`).join('') + (shows.length > 3 ? `<span class="tag">+${shows.length - 3}</span>` : '') : '<span class="cell-sub">—</span>'}</div></td><td><button class="button ghost small" data-action="edit-contact" data-id="${escapeAttr(contact.id)}">Modifier</button></td></tr>`;
+        }).join('')}
+        </tbody></table></div><div class="table-footer"><span>${contacts.length} résultat${contacts.length > 1 ? 's' : ''}</span><span>Les cases sélectionnent les contacts pour une liste d’emails</span></div>` : '<div class="empty-state">Aucun contact ne correspond à votre recherche.</div>';
+      const count = document.getElementById('selection-count');
+      const bar = document.getElementById('selection-bar');
+      if (count && bar) { count.textContent = state.selected.size; bar.classList.toggle('visible', state.selected.size > 0); }
+    }
+
+    function renderSpectacles() {
+      const categories = ['Jeune public', 'Adultes', 'Rue', 'Tout public', 'Autre'];
+      const shows = filteredShows();
+      main.innerHTML = `
+        <section class="page-heading"><div><p class="eyebrow">Le catalogue</p><h1>Spectacles</h1><p class="page-intro">${state.spectacles.length} spectacle${state.spectacles.length > 1 ? 's' : ''} référencé${state.spectacles.length > 1 ? 's' : ''}.</p></div><div class="heading-actions"><button class="button" data-action="new-show">＋ Ajouter un spectacle</button></div></section>
+        <div class="show-filters"><div class="field-wrap search"><input class="control" id="show-search" placeholder="Rechercher un spectacle ou une compagnie…" value="${escapeAttr(state.showQuery)}"></div><select id="show-category" class="select-control"><option value="">Toutes les catégories</option>${categories.map(category => `<option value="${escapeAttr(category)}" ${state.showCategory === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}</select></div>
+        <div id="show-results" class="show-grid">${showCards(shows)}</div>`;
+    }
+
+    function filteredShows() {
+      const q = state.showQuery.toLocaleLowerCase('fr').trim();
+      return state.spectacles.filter(show => (!q || `${show.nom} ${show.compagnie} ${show.commentaires}`.toLocaleLowerCase('fr').includes(q)) && (!state.showCategory || show.categorie === state.showCategory)).sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
+    }
+
+    function showCards(shows) {
+      return shows.length ? shows.map(show => `<article class="show-card"><div class="show-top"><div><h2 class="show-title">${escapeHtml(show.nom || 'Sans titre')}</h2><div class="show-company">${escapeHtml(show.compagnie || 'Compagnie non renseignée')}</div></div><span class="tag ${show.categorie === 'Jeune public' ? 'green' : show.categorie === 'Rue' ? 'amber' : 'blue'}">${escapeHtml(show.categorie || 'À classer')}</span></div>${show.commentaires ? `<div class="cell-sub" style="white-space:normal;margin-top:12px">${escapeHtml(show.commentaires)}</div>` : ''}<div class="show-edit"><button class="button ghost small" data-action="edit-show" data-id="${escapeAttr(show.id)}">Modifier la fiche</button></div></article>`).join('') : '<div class="panel empty-state" style="grid-column:1/-1">Aucun spectacle ne correspond à votre recherche.</div>';
+    }
+
+    function renderImport() {
+      main.innerHTML = `
+        <section class="page-heading"><div><p class="eyebrow">Migration des données</p><h1>Importer des contacts</h1><p class="page-intro">Récupérez les fiches d’un autre Google Sheet en quelques étapes.</p></div></section>
+        <section class="import-layout">
+          <article class="panel form-panel"><h2>Source Google Sheets</h2><p>Les contacts déjà présents avec la même adresse email seront mis à jour.</p>
+            <form id="import-form"><div class="form-grid">
+              <div class="form-field full"><label for="source-id">Identifiant ou URL du Google Sheet</label><input class="control" id="source-id" name="spreadsheetId" required placeholder="https://docs.google.com/spreadsheets/d/…"></div>
+              <div class="form-field"><label for="source-tab">Nom de l’onglet source</label><input class="control" id="source-tab" name="sheetName" required placeholder="Feuille 1"></div>
+              <div class="form-field"><label for="show-mode">Les spectacles de la source sont</label><select class="select-control" id="show-mode" name="showMode"><option value="vus">des spectacles vus</option><option value="programmes">des spectacles programmés</option></select></div>
+              <div class="form-field full"><label class="check-option"><input type="checkbox" class="checkbox" name="hasHeader" checked> La première ligne contient les en-têtes de colonnes</label></div>
+              <div class="form-field full"><button class="button" type="submit">↥ Importer les contacts</button></div>
+            </div></form>
+          </article>
+          <aside class="import-aside"><div class="aside-icon">▤</div><h3>Colonnes reconnues</h3><p>Les en-têtes sont détectés automatiquement, même avec ou sans accents.</p><ul><li>Note, Company, Civilité, Prénom, Nom</li><li>Commentaires, Email, Ville, Département</li><li>Téléphone, Spectacles vus ou programmés</li></ul><div class="notice">Si votre feuille n’a pas de ligne d’en-tête, décochez l’option. Les colonnes seront lues dans l’ordre indiqué ci-dessus.</div></aside>
+        </section>`;
+    }
+
+    function openContactModal(contact = {}) {
+      const editing = Boolean(contact.id);
+      const seenOptions = state.spectacles.length ? showPickerList(contact, 'seen') : '<div class="picker-empty">Ajoutez d’abord un spectacle pour pouvoir l’associer.</div>';
+      const programmedOptions = state.spectacles.length ? showPickerList(contact, 'programmed') : '<div class="picker-empty">Ajoutez d’abord un spectacle pour pouvoir l’associer.</div>';
+      modalRoot.innerHTML = `<div class="modal"><div class="modal-header"><div><h2>${editing ? 'Modifier le contact' : 'Nouveau contact'}</h2><p>Une fiche claire pour garder votre réseau à jour.</p></div><button class="close-button" type="button" data-action="close-modal" aria-label="Fermer">×</button></div>
+        <form id="contact-form"><div class="modal-body"><input type="hidden" name="id" value="${escapeAttr(contact.id || '')}"><div class="form-grid">
+          <div class="form-field"><label>Civilité</label><select class="select-control" name="civilite"><option value="">Choisir…</option>${['Madame', 'Monsieur', 'Mx'].map(item => `<option ${contact.civilite === item ? 'selected' : ''}>${item}</option>`).join('')}</select></div>
+          <div class="form-field"><label>Structure / company</label><input class="control" name="company" value="${escapeAttr(contact.company || '')}" placeholder="Nom de la structure"></div>
+          <div class="form-field"><label>Prénom</label><input class="control" name="prenom" value="${escapeAttr(contact.prenom || '')}" autocomplete="given-name"></div>
+          <div class="form-field"><label>Nom</label><input class="control" name="nom" value="${escapeAttr(contact.nom || '')}" autocomplete="family-name"></div>
+          <div class="form-field"><label>Adresse email</label><input class="control" type="email" name="email" value="${escapeAttr(contact.email || '')}" autocomplete="email"></div>
+          <div class="form-field"><label>Téléphone</label><input class="control" name="telephone" value="${escapeAttr(contact.telephone || '')}" autocomplete="tel"></div>
+          <div class="form-field"><label>Ville</label><input class="control" name="ville" value="${escapeAttr(contact.ville || '')}"></div>
+          <div class="form-field"><label>Département</label><input class="control" name="departement" value="${escapeAttr(contact.departement || '')}" placeholder="Ex. 75"></div>
+          <div class="form-field full"><span class="form-label">Programme des spectacles</span><div class="checkline">${[['jeunePublic', 'Jeune public'], ['adulte', 'Adultes'], ['rue', 'Spectacles de rue']].map(([key, label]) => `<label class="check-option"><input class="checkbox" type="checkbox" name="${key}" ${contact[key] ? 'checked' : ''}>${label}</label>`).join('')}</div></div>
+          <div class="form-field full"><div class="show-pickers"><div class="picker-box"><p class="picker-title">Spectacles vus</p><div class="picker-list">${seenOptions}</div></div><div class="picker-box"><p class="picker-title">Spectacles programmés</p><div class="picker-list">${programmedOptions}</div></div></div></div>
+          <div class="form-field full"><label>Commentaires</label><textarea class="textarea-control" name="commentaires" placeholder="Informations utiles sur ce contact…">${escapeHtml(contact.commentaires || '')}</textarea></div>
+          <div class="form-field full"><label>Note</label><textarea class="textarea-control" name="note" placeholder="Note personnelle…">${escapeHtml(contact.note || '')}</textarea></div>
+        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="submit">${editing ? 'Enregistrer les modifications' : 'Créer le contact'}</button></div></form></div>`;
+      modalRoot.classList.add('open');
+    }
+
+    function showPickerList(contact, kind) {
+      const key = kind === 'seen' ? 'spectaclesVus' : 'spectaclesProgrammes';
+      const attribute = kind === 'seen' ? 'showSeen' : 'showProgrammed';
+      return state.spectacles.map(show => `<label class="check-option"><input class="checkbox" type="checkbox" data-${attribute}="${escapeAttr(show.id)}" ${((contact[key] || []).includes(show.id)) ? 'checked' : ''}>${escapeHtml(show.nom)}</label>`).join('');
+    }
+
+    function openShowModal(show = {}) {
+      const editing = Boolean(show.id);
+      modalRoot.innerHTML = `<div class="modal narrow"><div class="modal-header"><div><h2>${editing ? 'Modifier le spectacle' : 'Nouveau spectacle'}</h2><p>Complétez les informations de la fiche.</p></div><button class="close-button" type="button" data-action="close-modal">×</button></div>
+        <form id="show-form"><div class="modal-body"><input type="hidden" name="id" value="${escapeAttr(show.id || '')}"><div class="form-grid">
+          <div class="form-field full"><label>Nom du spectacle</label><input class="control" name="nom" required value="${escapeAttr(show.nom || '')}" placeholder="Titre du spectacle"></div>
+          <div class="form-field full"><label>Nom de la compagnie</label><input class="control" name="compagnie" value="${escapeAttr(show.compagnie || '')}" placeholder="Compagnie"></div>
+          <div class="form-field full"><label>Catégorie</label><select class="select-control" name="categorie"><option value="">Choisir une catégorie…</option>${['Jeune public', 'Adultes', 'Rue', 'Tout public', 'Autre'].map(category => `<option ${show.categorie === category ? 'selected' : ''}>${category}</option>`).join('')}</select></div>
+          <div class="form-field full"><label>Commentaires</label><textarea class="textarea-control" name="commentaires" placeholder="Informations sur le spectacle…">${escapeHtml(show.commentaires || '')}</textarea></div>
+        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="submit">${editing ? 'Enregistrer' : 'Créer le spectacle'}</button></div></form></div>`;
+      modalRoot.classList.add('open');
+    }
+
+    function openEmailModal() {
+      modalRoot.innerHTML = `<div class="modal narrow"><div class="modal-header"><div><h2>Créer une liste d’emails</h2><p>${state.selected.size} contact(s) sélectionné(s).</p></div><button class="close-button" type="button" data-action="close-modal">×</button></div><form id="email-form"><div class="modal-body"><div class="form-field"><label>Nom de la liste</label><input class="control" name="listName" placeholder="Ex. Programmateurs – automne 2026"></div><div class="notice">Les adresses valides seront ajoutées à l’onglet « Listes emails », dans la colonne « email google ».</div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="submit">Créer la liste</button></div></form></div>`;
+      modalRoot.classList.add('open');
+    }
+
+    function closeModal() { modalRoot.classList.remove('open'); modalRoot.innerHTML = ''; }
+
+    async function handleMainClick(event) {
+      const pageButton = event.target.closest('[data-page]');
+      if (pageButton && !pageButton.classList.contains('nav-item')) { navigate(pageButton.dataset.page); return; }
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+      const action = button.dataset.action;
+      if (action === 'new-contact') openContactModal();
+      if (action === 'edit-contact') { const contact = state.contacts.find(item => item.id === button.dataset.id); if (contact) openContactModal(contact); }
+      if (action === 'new-show') openShowModal();
+      if (action === 'edit-show') { const show = state.spectacles.find(item => item.id === button.dataset.id); if (show) openShowModal(show); }
+      if (action === 'email-list') openEmailModal();
+      if (action === 'clear-selection') { state.selected.clear(); renderContactRows(); }
+    }
+
+    function handleMainInput(event) {
+      if (event.target.id === 'contact-search') { state.contactQuery = event.target.value; renderContactRows(); }
+      if (event.target.id === 'show-search') { state.showQuery = event.target.value; document.getElementById('show-results').innerHTML = showCards(filteredShows()); }
+    }
+
+    function handleMainChange(event) {
+      const target = event.target;
+      if (target.id === 'department-filter') state.department = target.value;
+      if (target.id === 'audience-filter') state.audience = target.value;
+      if (target.id === 'contact-show-filter') state.contactShow = target.value;
+      if (target.id === 'contact-sort') { renderContactRows(); return; }
+      if (target.id === 'show-category') state.showCategory = target.value;
+      if (target.id === 'show-category' || target.id === 'show-search') { const results = document.getElementById('show-results'); if (results) results.innerHTML = showCards(filteredShows()); return; }
+      if (target.dataset.contactCheck) {
+        if (target.checked) state.selected.add(target.dataset.contactCheck); else state.selected.delete(target.dataset.contactCheck);
+      }
+      if (target.dataset.action === 'select-visible') {
+        filteredContacts().forEach(contact => target.checked ? state.selected.add(contact.id) : state.selected.delete(contact.id));
+      }
+      renderContactRows();
+    }
+
+    async function handleMainSubmit(event) {
+      if (!['setup-form', 'import-form'].includes(event.target.id)) return;
+      event.preventDefault();
+      const form = event.target;
+      const values = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const isSetup = form.id === 'setup-form';
+      setBusy(button, true, isSetup ? 'Connexion…' : 'Import en cours…');
+      try {
+        if (isSetup) {
+          const result = await callServer('connectSpreadsheet', values.get('spreadsheetId'));
+          await loadData();
+          notify(`Google Sheet « ${result.name} » connecté.`);
+          return;
+        }
+        const spreadsheetId = extractSpreadsheetId(values.get('spreadsheetId'));
+        const result = await callServer('importContacts', { spreadsheetId, sheetName: values.get('sheetName'), hasHeader: values.has('hasHeader'), showMode: values.get('showMode') });
+        await loadData();
+        notify(`${result.count} contact(s) importé(s) · ${result.shows} spectacle(s) ajouté(s).`);
+      } catch (error) { notify(error.message, true); }
+      finally { if (button) { button.disabled = false; button.textContent = isSetup ? 'Connecter le fichier' : '↥ Importer les contacts'; } }
+    }
+
+    async function handleModalSubmit(event) {
+      const form = event.target;
+      if (!['contact-form', 'show-form', 'email-form'].includes(form.id)) return;
+      event.preventDefault();
+      const button = form.querySelector('button[type="submit"]');
+      setBusy(button, true, 'Enregistrement…');
+      try {
+        const values = new FormData(form);
+        if (form.id === 'contact-form') {
+          const contact = {
+            id: values.get('id'), civilite: values.get('civilite'), prenom: values.get('prenom'), nom: values.get('nom'), email: values.get('email'),
+            telephone: values.get('telephone'), ville: values.get('ville'), departement: values.get('departement'), company: values.get('company'),
+            commentaires: values.get('commentaires'), note: values.get('note'), jeunePublic: values.has('jeunePublic'), adulte: values.has('adulte'), rue: values.has('rue'),
+            spectaclesVus: [...form.querySelectorAll('[data-show-seen]:checked')].map(input => input.dataset.showSeen),
+            spectaclesProgrammes: [...form.querySelectorAll('[data-show-programmed]:checked')].map(input => input.dataset.showProgrammed)
+          };
+          await callServer('saveContact', contact);
+          closeModal(); await loadData(); notify('La fiche contact a été enregistrée.');
+        }
+        if (form.id === 'show-form') {
+          await callServer('saveSpectacle', { id: values.get('id'), nom: values.get('nom'), compagnie: values.get('compagnie'), categorie: values.get('categorie'), commentaires: values.get('commentaires') });
+          closeModal(); await loadData(); notify('La fiche spectacle a été enregistrée.');
+        }
+        if (form.id === 'email-form') {
+          const result = await callServer('createEmailList', [...state.selected], values.get('listName'));
+          closeModal(); state.selected.clear(); render(); notify(`${result.count} email(s) ajoutés à « ${result.listName} ».`);
+        }
+      } catch (error) { notify(error.message, true); if (button) { button.disabled = false; button.textContent = 'Réessayer'; } }
+    }
+
+    function handleModalClick(event) {
+      if (event.target === modalRoot || event.target.closest('[data-action="close-modal"]')) closeModal();
+    }
+
+    function notify(message, error = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message; toast.classList.toggle('error', error); toast.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 3900);
+    }
+
+    function setBusy(button, busy, label) { if (!button) return; if (busy) { button.dataset.previous = button.textContent; button.disabled = true; button.textContent = label; } else { button.disabled = false; button.textContent = button.dataset.previous || label; } }
+    function fullName(contact) { return [contact.civilite, contact.prenom, contact.nom].filter(Boolean).join(' ').trim(); }
+    function initials(contact) { return `${(contact.prenom || contact.nom || 'C').charAt(0)}${(contact.nom || '').charAt(0)}`.toLocaleUpperCase('fr'); }
+    function showName(id) { const show = state.spectacles.find(item => item.id === id); return show ? show.nom : 'Spectacle'; }
+    function showNames(ids) { return ids.map(showName).join(' '); }
+    function escapeHtml(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
+    function escapeAttr(value) { return escapeHtml(value); }
+    function extractSpreadsheetId(value) { const input = String(value || '').trim(); const match = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/); return match ? match[1] : input; }
+
+    loadData();
+  </script>
+</body>
+</html>
