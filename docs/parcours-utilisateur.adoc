@@ -1,0 +1,356 @@
+= Parcours utilisateur et accès à Google Sheets
+:toc:
+:toclevels: 3
+:sectnums:
+
+Ce document décrit les parcours présents dans l’application, depuis les actions de l’interface jusqu’aux lectures et écritures du Google Sheet.
+
+Les diagrammes sont écrits en Mermaid dans des blocs AsciiDoc `[mermaid]`. Leur rendu nécessite un moteur AsciiDoc avec la prise en charge Mermaid (par exemple Asciidoctor Diagram avec Mermaid).
+
+== Architecture et frontière Google Sheets
+
+L’application est une Web App Google Apps Script. `doGet()` sert `Index.html`; le JavaScript de la page appelle les fonctions globales du serveur avec `google.script.run`. Le serveur utilise le service Apps Script `SpreadsheetApp` pour manipuler les classeurs et plages.
+
+[NOTE]
+====
+Le code ne fait pas de requêtes directes à l’API REST Google Sheets (`spreadsheets.values.get`, `spreadsheets.values.update`, `spreadsheets.batchUpdate`, etc.). Les accès décrits ci-dessous sont des appels au service Apps Script `SpreadsheetApp`, qui fournit l’interface Apps Script au classeur Google.
+====
+
+[mermaid]
+----
+flowchart LR
+    U[Utilisateur] --> UI[Index.html<br/>interface et état JavaScript]
+    UI -->|google.script.run| S[Code.js<br/>fonctions serveur Apps Script]
+    S --> P[PropertiesService<br/>SPREADSHEET_ID]
+    S --> SS[SpreadsheetApp<br/>classeur Google Sheets]
+    SS --> C[(Contacts)]
+    SS --> SH[(Spectacles)]
+    SS --> ML[(Listes emails)]
+    I[Google Sheet source d'import] -->|SpreadsheetApp.openById| S
+----
+
+=== Fonctions exposées à l’interface
+
+|===
+|Parcours |Fonction côté navigateur |Fonction Apps Script appelée
+
+|Chargement / actualisation des données |`loadData()` → `callServer(...)` |`getAppData()`
+|Connexion de la base |`handleMainSubmit()` → `callServer(...)` |`connectSpreadsheet(idOuUrl)`
+|Création ou modification d’un contact |`handleModalSubmit()` |`saveContact(contact)`
+|Création ou modification d’un spectacle |`handleModalSubmit()` |`saveSpectacle(spectacle)`
+|Création d’une liste d’emails |`handleModalSubmit()` |`createEmailList(ids, nom)`
+|Import d’un autre classeur |`handleMainSubmit()` |`importContacts(options)`
+|===
+
+La navigation, la recherche, le tri, les filtres et les cases de sélection des contacts travaillent sur `state.contacts` et `state.spectacles`, déjà chargés dans le navigateur. Ces interactions n’appellent pas Google Sheets à chaque changement de page ou de filtre. Une actualisation des données a lieu au démarrage et après la connexion, la sauvegarde d’une fiche ou l’import.
+
+== Classeur et onglets
+
+`ensureSheets_()` s’assure de l’existence des trois onglets. `ensureSheet_()` crée un onglet absent, ajoute les en-têtes manquants à la ligne 1 et fige cette ligne. En conséquence, même un parcours de lecture peut initialiser les onglets ou compléter leurs en-têtes.
+
+|===
+|Onglet |Colonnes gérées
+
+|`Contacts` |ID, Civilité, Prénom, Nom, Email, Téléphone, Ville, Département, Company, Spectacles vus, Spectacles programmés, Programme jeune public, Programme adulte, Programme de rue, Commentaires, Note, Créé le, Modifié le
+|`Spectacles` |ID, Nom du spectacle, Compagnie, Catégorie, Commentaires, Créé le, Modifié le
+|`Listes emails` |Nom de la liste, Créée le, email google
+|===
+
+Les identifiants de spectacle liés à un contact sont stockés dans les colonnes `Spectacles vus` et `Spectacles programmés` sous forme de JSON. Les cases de programmation sont enregistrées comme `Oui` ou `Non`. Les téléphones et départements sont formatés en texte lors de l’écriture d’une fiche contact.
+
+== Ouverture et chargement initial
+
+À l’ouverture, Apps Script exécute `doGet()` et retourne la page `Index`. Le script de la page appelle ensuite `loadData()`, qui demande `getAppData()` au serveur.
+
+[mermaid]
+----
+sequenceDiagram
+    actor U as Utilisateur
+    participant GAS as Apps Script Web App
+    participant UI as Index.html
+    participant API as google.script.run
+    participant Code as Code.js
+    participant Prop as PropertiesService
+    participant SS as SpreadsheetApp / classeur
+
+    U->>GAS: Ouvre l'URL de l'application
+    GAS->>Code: doGet()
+    Code-->>GAS: HtmlService.createHtmlOutputFromFile("Index")
+    GAS-->>UI: Page HTML
+    UI->>UI: loadData()
+    UI->>API: getAppData()
+    API->>Code: getAppData()
+    Code->>Prop: getProperty("SPREADSHEET_ID")
+    alt identifiant enregistré
+        Code->>SS: SpreadsheetApp.openById(id)
+    else aucun identifiant enregistré
+        Code->>SS: SpreadsheetApp.getActiveSpreadsheet()
+        alt aucun classeur lié
+            Code-->>UI: setupRequired = true, contacts/spectacles vides
+            UI->>UI: renderSetup()
+        else classeur lié
+            Code->>Prop: setProperty("SPREADSHEET_ID", id)
+        end
+    end
+    opt classeur disponible
+        Code->>SS: ensureSheets_() : création/complément des onglets et en-têtes
+        Code->>SS: readRecords_("Contacts")
+        Code->>SS: getDataRange().getValues()
+        Code->>SS: readRecords_("Spectacles")
+        Code->>SS: getDataRange().getValues()
+        Code-->>UI: setupRequired=false, contacts[], spectacles[]
+        UI->>UI: mise à jour de state puis render()
+    end
+----
+
+La lecture d’un onglet passe par `readRecords_()` : `ensureSheet_()`, puis `getDataRange().getValues()`. Les lignes sont associées aux en-têtes et transformées par `contactFromRow_()` ou `showFromRow_()`. `getAppData()` ne lit pas l’onglet `Listes emails`.
+
+=== Premier rattachement d’un Google Sheet
+
+Si aucun classeur lié ni `SPREADSHEET_ID` n’est disponible, `getAppData()` reconnaît l’erreur « Aucune feuille liée » et retourne `setupRequired: true`. L’utilisateur fournit alors l’URL ou l’identifiant du classeur.
+
+Chaîne d’appels : `setup-form` → `handleMainSubmit()` → `callServer('connectSpreadsheet', id)` → `connectSpreadsheet()` → `SpreadsheetApp.openById(id)` → `PropertiesService.getScriptProperties().setProperty(...)` → `ensureSheets_()` → `ensureSheet_()`.
+
+`connectSpreadsheet()` crée ou complète `Contacts`, `Spectacles` et `Listes emails`, puis l’interface relance `loadData()` pour lire les données et afficher l’application.
+
+== Consultation, recherche et filtres
+
+L’accueil, la liste des contacts et le catalogue des spectacles sont rendus à partir des données présentes dans l’état JavaScript. La navigation déclenche `navigate()` puis `render()`. La saisie de recherche ou le changement de filtre relance le filtrage local (`filteredContacts()` ou `filteredShows()`) et le rendu des résultats.
+
+[mermaid]
+----
+flowchart TD
+    A[Données chargées par getAppData] --> B[state.contacts / state.spectacles]
+    B --> H[renderHome : compteurs et contacts récents]
+    B --> C[renderContacts]
+    C --> CF[filteredContacts : texte, département, profil, spectacle, tri]
+    CF --> CR[renderContactRows]
+    B --> S[renderSpectacles]
+    S --> SF[filteredShows : texte, compagnie, catégorie, tri par nom]
+    SF --> SR[showCards]
+    N[Clic de navigation] --> R[navigate puis render]
+    R --> H
+    R --> C
+    R --> S
+    Q[Saisie ou filtre] --> CF
+    Q --> SF
+----
+
+Ces parcours ne relisent et ne modifient aucune plage Sheets. La liste des contacts permet également de sélectionner une ou plusieurs fiches en mémoire; les identifiants sélectionnés sont envoyés au serveur uniquement lors de la création d’une liste d’emails.
+
+== Création et modification d’un contact
+
+Le formulaire est prérempli depuis l’objet déjà en mémoire si l’utilisateur choisit « Modifier ». À l’enregistrement, le navigateur construit un objet contact, puis appelle `saveContact()`.
+
+[mermaid]
+----
+sequenceDiagram
+    actor U as Utilisateur
+    participant UI as Index.html
+    participant Code as Code.js
+    participant Lock as LockService
+    participant SS as SpreadsheetApp / onglet Contacts
+
+    U->>UI: Nouveau contact ou Modifier
+    UI->>UI: openContactModal(contact?)
+    U->>UI: Soumet le formulaire
+    UI->>UI: handleModalSubmit() construit contact
+    UI->>Code: google.script.run.saveContact(contact)
+    Code->>Lock: getScriptLock().waitLock(10000)
+    Code->>SS: ensureSheets_()
+    Code->>SS: findRecord_("Contacts", "ID", id)
+    Note over Code,SS: Lecture via readRecords_() puis getDataRange().getValues()
+    alt création (ID absent)
+        Code->>Code: Utilities.getUuid() puis définir Créé le à la date courante
+        Code->>SS: writeRecord_(..., rowNumber absent)
+        SS->>SS: getLastRow() + 1, puis préparer une nouvelle ligne
+    else modification (ID fourni)
+        Code->>Code: conserver la date Créé le existante
+        Code->>SS: writeRecord_(..., existing._row)
+        SS->>SS: relire la ligne existante pour préserver colonnes étrangères
+    end
+    Code->>SS: setNumberFormat("@") pour Téléphone et Département
+    Code->>SS: getRange(...).setValues([ligne])
+    Code->>Lock: releaseLock()
+    Code-->>UI: contact converti
+    UI->>Code: loadData() → getAppData()
+    Code->>SS: relire Contacts et Spectacles
+    Code-->>UI: données actualisées
+    UI->>UI: render(), fermer la modale, notification
+----
+
+Chaîne de persistance détaillée : `handleModalSubmit()` → `callServer('saveContact', contact)` → `saveContact()` → `LockService.getScriptLock()` → `ensureSheets_()` → `findRecord_()` → `readRecords_()` → `getDataRange().getValues()` → `writeRecord_()` → `getRange().setNumberFormat('@')` et `getRange().setValues([row])`.
+
+Une création reçoit un UUID et est ajoutée en fin de tableau. Une modification retrouve la ligne par son ID et réécrit cette ligne. La date `Créé le` est conservée à la modification; `Modifié le` est remplacée par la date courante. Les contacts vus ou programmés sont sérialisés en JSON. Après le succès, l’interface recharge contacts et spectacles avec `getAppData()`.
+
+== Création et modification d’un spectacle
+
+Le catalogue et l’accueil ouvrent le formulaire via `openShowModal()`. Pour une modification, le spectacle est récupéré depuis `state.spectacles`; la sauvegarde suit la même stratégie que le contact, avec une recherche par ID dans l’onglet `Spectacles`.
+
+[mermaid]
+----
+sequenceDiagram
+    actor U as Utilisateur
+    participant UI as Index.html
+    participant Code as Code.js
+    participant Lock as LockService
+    participant SS as SpreadsheetApp / onglet Spectacles
+
+    U->>UI: Ajouter un spectacle ou Modifier la fiche
+    UI->>UI: openShowModal(show?)
+    U->>UI: Soumet le formulaire
+    UI->>UI: handleModalSubmit()
+    UI->>Code: google.script.run.saveSpectacle(spectacle)
+    Code->>Lock: getScriptLock().waitLock(10000)
+    Code->>SS: ensureSheets_()
+    Code->>SS: findRecord_("Spectacles", "ID", id)
+    Note over Code,SS: Recherche par lecture de l'onglet
+    alt création
+        Code->>Code: Utilities.getUuid() puis définir Créé le à la date courante
+        Code->>SS: writeRecord_(..., nouvelle ligne)
+    else modification
+        Code->>Code: conserver Créé le et mettre à jour Modifié le
+        Code->>SS: writeRecord_(..., ligne existante)
+    end
+    Code->>SS: getRange(...).setValues([ligne])
+    Code->>Lock: releaseLock()
+    Code-->>UI: spectacle converti
+    UI->>Code: loadData() → getAppData()
+    Code->>SS: relire Contacts et Spectacles
+    Code-->>UI: données actualisées
+    UI->>UI: render(), fermer la modale, notification
+----
+
+Chaîne : `handleModalSubmit()` → `saveSpectacle()` → `LockService` → `ensureSheets_()` → `findRecord_()` → `readRecords_()` → `writeRecord_()` → `getRange().setValues([row])`. La création ajoute une ligne et un ID; la modification réécrit la ligne associée à l’ID et conserve sa date de création. Aucune fonction de suppression de spectacle ou de contact n’est présente dans le code actuel.
+
+== Création d’une liste d’emails
+
+L’utilisateur sélectionne des contacts dans la liste, ouvre la modale et fournit éventuellement un nom. `createEmailList()` relit l’onglet `Contacts`, filtre les identifiants choisis, écarte les emails vides ou invalides et déduplique sans tenir compte de la casse. Puis les emails sont ajoutés à l’onglet `Listes emails`.
+
+[mermaid]
+----
+sequenceDiagram
+    actor U as Utilisateur
+    participant UI as Index.html
+    participant Code as Code.js
+    participant SS as SpreadsheetApp / classeur
+
+    U->>UI: Coche des contacts puis « Créer une liste d'emails »
+    UI->>UI: openEmailModal()
+    U->>UI: Confirme le nom de la liste
+    UI->>Code: google.script.run.createEmailList(ids, nom)
+    Code->>SS: ensureSheets_()
+    Code->>SS: readRecords_("Contacts")
+    Code->>SS: Contacts.getDataRange().getValues()
+    Code->>Code: filtrer IDs, valider et dédupliquer les emails
+    alt aucune sélection ou aucune adresse valide
+        Code-->>UI: erreur
+        UI->>UI: afficher l'erreur dans la modale / notification
+    else au moins un email valide
+        Code->>SS: getSheetByName("Listes emails")
+        Code->>SS: getLastRow()
+        Code->>SS: getRange(prochaine ligne, 1, nombre d'emails, 3).setValues(...)
+        Note over SS: Ajoute une ligne par email : nom, date de création, email
+        Code-->>UI: nom, nombre ajouté, nombre ignoré
+        UI->>UI: fermer la modale, vider la sélection, notifier
+    end
+----
+
+Écriture ciblée : `getSpreadsheet_().getSheetByName('Listes emails')`, puis `getRange(sheet.getLastRow() + 1, 1, emails.length, 3).setValues(...)`. Les entrées déjà présentes ne sont pas modifiées et l’onglet des listes n’est pas relu pour cette opération.
+
+== Import depuis un autre Google Sheet
+
+L’import lit un onglet source, interprète ses en-têtes (ou un ordre fixe sans en-têtes), retrouve les contacts existants par email, associe ou crée les spectacles cités, puis crée ou met à jour les fiches dans le classeur LuCiPortfolio.
+
+[mermaid]
+----
+sequenceDiagram
+    actor U as Utilisateur
+    participant UI as Index.html
+    participant Code as Code.js
+    participant Src as SpreadsheetApp / classeur source
+    participant Dst as SpreadsheetApp / classeur LuCiPortfolio
+    participant Lock as LockService
+
+    U->>UI: Renseigne ID/URL, onglet, en-têtes, mode vu/programmé
+    UI->>Code: google.script.run.importContacts(options)
+    Code->>Dst: ensureSheets_()
+    Code->>Src: SpreadsheetApp.openById(sourceId)
+    Code->>Src: getSheetByName(sheetName)
+    Code->>Src: getDataRange().getValues()
+    alt onglet absent
+        Code-->>UI: erreur « Onglet introuvable »
+    else source vide
+        Code-->>UI: compteurs à zéro
+    else source avec des lignes
+        Code->>Code: normaliser en-têtes / choisir colonnes
+        Code->>Dst: readRecords_("Contacts") puis lire les lignes
+        Code->>Dst: readRecords_("Spectacles") puis lire les lignes
+        loop chaque ligne non vide
+            Code->>Code: rechercher le contact par email
+            loop chaque nom de spectacle de la ligne
+                alt spectacle absent du catalogue
+                    Code->>Code: saveSpectacle(nouveau spectacle)
+                    Code->>Lock: verrouiller le script
+                    Code->>Dst: trouver par ID puis écrire dans Spectacles
+                    Code->>Lock: libérer le verrou
+                else spectacle déjà connu
+                    Code->>Code: réutiliser son ID
+                end
+            end
+            Code->>Code: fusionner les valeurs importées et existantes
+            Code->>Code: saveContact(contact)
+            Code->>Lock: verrouiller le script
+            Code->>Dst: trouver par ID puis écrire dans Contacts
+            Code->>Lock: libérer le verrou
+        end
+        Code-->>UI: compteurs created / updated / shows / count
+        UI->>Code: loadData() → getAppData()
+        Code->>Dst: relire Contacts et Spectacles
+        Code-->>UI: données actualisées
+        UI->>UI: afficher le bilan d'import
+    end
+----
+
+=== Règles de fusion de l’import
+
+* Les en-têtes sont normalisés en minuscules, sans accents, et les espaces/punctuations sont standardisés. Des alias français et anglais sont reconnus. Si une colonne ne correspond pas, l’import utilise l’index de repli prévu dans `importContacts()`.
+* Le contact existant est recherché par email, sans tenir compte de la casse. Un email absent conduit à une création; un email correspondant réutilise l’ID existant.
+* Une valeur importée vide conserve, pour un contact existant, la valeur déjà présente. Les associations de spectacles sont fusionnées sans doublons avec celles déjà enregistrées.
+* Le mode sélectionné ajoute les associations dans `Spectacles vus` ou `Spectacles programmés`. Les autres préférences du contact existant sont conservées.
+* Les noms de spectacles sont comparés sans tenir compte de la casse. Un spectacle absent est créé dans `Spectacles` via `saveSpectacle()` avant d’être relié au contact.
+
+L’import appelle `saveSpectacle()` et `saveContact()` dans une boucle; chacun utilise un verrou de script et réalise ses opérations de lecture/recherche et d’écriture. Le volume d’appels au classeur augmente donc avec le nombre de lignes et de nouveaux spectacles importés.
+
+== Détail des opérations Apps Script Sheets
+
+|===
+|Méthode utilisée |Rôle dans l’application
+
+|`SpreadsheetApp.openById(id)` |Ouvre la base configurée ou le classeur source de l’import.
+|`SpreadsheetApp.getActiveSpreadsheet()` |Résout le classeur lié lors du premier accès lorsqu’aucun ID n’est mémorisé.
+|`Spreadsheet.getSheetByName(name)` |Récupère un onglet existant, notamment l’onglet `Listes emails`.
+|`Spreadsheet.insertSheet(name)` |Crée un onglet requis s’il n’existe pas.
+|`Sheet.getRange(...).getValues()` |Lit les en-têtes, l’intégralité des lignes, ou la ligne existante lors d’une modification.
+|`Sheet.getDataRange().getValues()` |Lit les données des onglets Contacts/Spectacles et de l’onglet source importé.
+|`Sheet.getLastRow()` / `getLastColumn()` |Détermine les dimensions présentes et la prochaine ligne d’ajout.
+|`Range.setValue(header)` / `Range.setValues(...)` |Ajoute les en-têtes manquants ou écrit les fiches et lignes d’emails.
+|`Range.setNumberFormat('@')` |Force les champs Téléphone et Département des contacts au format texte.
+|`Sheet.setFrozenRows(1)` |Fige la ligne d’en-tête à l’initialisation ou à la vérification de l’onglet.
+|===
+
+`PropertiesService` conserve l’identifiant de la base (`SPREADSHEET_ID`). `LockService.getScriptLock()` sérialise les écritures de contacts et de spectacles; `Utilities.getUuid()` génère les nouveaux identifiants. Ces services ne lisent ni n’écrivent les cellules eux-mêmes.
+
+== Erreurs et autorisations
+
+* Les appels navigateur/serveur sont enveloppés dans une Promise par `callServer()`. Les erreurs Apps Script sont reçues par `withFailureHandler()` et présentées dans l’interface.
+* `saveContact()` et `saveSpectacle()` préfixent les erreurs avec l’étape en cours et libèrent le verrou dans `finally` si celui-ci a été obtenu.
+* `connectSpreadsheet()` exige un identifiant ou une URL que le compte d’exécution peut ouvrir. `importContacts()` exige l’accès en lecture au classeur source et l’accès nécessaire à la base cible.
+* `appsscript.json` configure l’application Web pour s’exécuter comme le compte déployeur (`USER_DEPLOYING`). Ce compte doit disposer des droits Sheets requis. La configuration d’accès de l’application est `ANYONE`.
+
+== Repères dans le code
+
+* Interface et pont client/serveur : `Index.html`, fonctions `callServer()`, `loadData()`, `handleMainSubmit()` et `handleModalSubmit()`.
+* Parcours et rendu : `Index.html`, `navigate()`, `renderHome()`, `renderContacts()`, `filteredContacts()`, `renderSpectacles()`, `filteredShows()`.
+* Fonctions serveur : `Code.js`, `getAppData()`, `connectSpreadsheet()`, `saveContact()`, `saveSpectacle()`, `createEmailList()` et `importContacts()`.
+* Accès aux lignes et cellules : `Code.js`, `getSpreadsheet_()`, `ensureSheets_()`, `ensureSheet_()`, `readRecords_()`, `findRecord_()` et `writeRecord_()`.

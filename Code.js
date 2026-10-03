@@ -49,11 +49,16 @@ function connectSpreadsheet(spreadsheetIdOrUrl) {
 
 function saveContact(contact) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  let locked = false;
+  let phase = 'verrouillage';
   try {
+    lock.waitLock(10000);
+    locked = true;
+    phase = 'préparation des onglets';
     ensureSheets_();
     const record = contact || {};
     const id = clean_(record.id) || Utilities.getUuid();
+    phase = 'recherche du contact';
     const existing = findRecord_(SHEETS.contacts, 'ID', id);
     const now = new Date();
     const values = {
@@ -76,20 +81,28 @@ function saveContact(contact) {
       'Créé le': existing ? existing['Créé le'] : now,
       'Modifié le': now
     };
+    phase = 'écriture dans l’onglet Contacts';
     writeRecord_(SHEETS.contacts, CONTACT_HEADERS, values, existing && existing._row);
     return contactFromRow_(values);
+  } catch (error) {
+    throw new Error('Contact non enregistré — ' + phase + ' : ' + (error && error.message ? error.message : String(error)));
   } finally {
-    lock.releaseLock();
+    if (locked) lock.releaseLock();
   }
 }
 
 function saveSpectacle(spectacle) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  let locked = false;
+  let phase = 'verrouillage';
   try {
+    lock.waitLock(10000);
+    locked = true;
+    phase = 'préparation des onglets';
     ensureSheets_();
     const record = spectacle || {};
     const id = clean_(record.id) || Utilities.getUuid();
+    phase = 'recherche du spectacle';
     const existing = findRecord_(SHEETS.shows, 'ID', id);
     const now = new Date();
     const values = {
@@ -101,10 +114,13 @@ function saveSpectacle(spectacle) {
       'Créé le': existing ? existing['Créé le'] : now,
       'Modifié le': now
     };
+    phase = 'écriture dans l’onglet Spectacles';
     writeRecord_(SHEETS.shows, SHOW_HEADERS, values, existing && existing._row);
     return showFromRow_(values);
+  } catch (error) {
+    throw new Error('Spectacle non enregistré — ' + phase + ' : ' + (error && error.message ? error.message : String(error)));
   } finally {
-    lock.releaseLock();
+    if (locked) lock.releaseLock();
   }
 }
 
@@ -287,6 +303,10 @@ function writeRecord_(sheetName, headers, values, rowNumber) {
   headers.forEach(function (header) {
     const column = headerRow.indexOf(header) + 1;
     if (column > 0) row[column - 1] = values[header] === undefined ? '' : values[header];
+  });
+  ['Téléphone', 'Département'].forEach(function (header) {
+    const column = headerRow.indexOf(header) + 1;
+    if (column > 0) sheet.getRange(targetRow, column).setNumberFormat('@');
   });
   sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
 }

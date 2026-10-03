@@ -148,6 +148,10 @@
     .close-button { width: 29px; height: 29px; border: 0; border-radius: 8px; color: #7c8898; background: #f3f5f8; font-size: 18px; line-height: 1; }
     .modal-body { max-height: calc(90vh - 143px); overflow-y: auto; padding: 20px 23px; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 23px; border-top: 1px solid #edf0f4; background: #fcfdfe; }
+    .save-feedback { display: none; margin: 0 23px 12px; padding: 9px 11px; border-radius: 8px; color: #4569b8; background: #edf3ff; font-size: 11px; overflow-wrap: anywhere; }
+    .save-feedback.visible { display: block; }
+    .save-feedback.error { color: #96383d; background: #fff0f0; }
+    .save-feedback.success { color: #26734f; background: #eaf7f0; }
     .show-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .picker-box { padding: 12px; border: 1px solid #e8edf2; border-radius: 9px; }
     .picker-title { margin: 0 0 9px; color: #41516a; font-size: 11px; font-weight: 700; }
@@ -413,9 +417,10 @@
           <div class="form-field full"><div class="show-pickers"><div class="picker-box"><p class="picker-title">Spectacles vus</p><div class="picker-list">${seenOptions}</div></div><div class="picker-box"><p class="picker-title">Spectacles programmés</p><div class="picker-list">${programmedOptions}</div></div></div></div>
           <div class="form-field full"><label>Commentaires</label><textarea class="textarea-control" name="commentaires" placeholder="Informations utiles sur ce contact…">${escapeHtml(contact.commentaires || '')}</textarea></div>
           <div class="form-field full"><label>Note</label><textarea class="textarea-control" name="note" placeholder="Note personnelle…">${escapeHtml(contact.note || '')}</textarea></div>
-        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-contact">${editing ? 'Enregistrer les modifications' : 'Créer le contact'}</button></div></form></div>`;
+        </div></div><div class="save-feedback" data-save-feedback aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-contact">${editing ? 'Enregistrer les modifications' : 'Créer le contact'}</button></div></form></div>`;
       modalRoot.classList.add('open');
       bindModalSubmit('contact-form');
+      bindModalSaveButton('contact-form', 'save-contact');
     }
 
     function showPickerList(contact, kind) {
@@ -432,20 +437,27 @@
           <div class="form-field full"><label>Nom de la compagnie</label><input class="control" name="compagnie" value="${escapeAttr(show.compagnie || '')}" placeholder="Compagnie"></div>
           <div class="form-field full"><label>Catégorie</label><select class="select-control" name="categorie"><option value="">Choisir une catégorie…</option>${['Jeune public', 'Adultes', 'Rue', 'Tout public', 'Autre'].map(category => `<option ${show.categorie === category ? 'selected' : ''}>${category}</option>`).join('')}</select></div>
           <div class="form-field full"><label>Commentaires</label><textarea class="textarea-control" name="commentaires" placeholder="Informations sur le spectacle…">${escapeHtml(show.commentaires || '')}</textarea></div>
-        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-show">${editing ? 'Enregistrer' : 'Créer le spectacle'}</button></div></form></div>`;
+        </div></div><div class="save-feedback" data-save-feedback aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-show">${editing ? 'Enregistrer' : 'Créer le spectacle'}</button></div></form></div>`;
       modalRoot.classList.add('open');
       bindModalSubmit('show-form');
+      bindModalSaveButton('show-form', 'save-show');
     }
 
     function openEmailModal() {
-      modalRoot.innerHTML = `<div class="modal narrow"><div class="modal-header"><div><h2>Créer une liste d’emails</h2><p>${state.selected.size} contact(s) sélectionné(s).</p></div><button class="close-button" type="button" data-action="close-modal">×</button></div><form id="email-form"><div class="modal-body"><div class="form-field"><label>Nom de la liste</label><input class="control" name="listName" placeholder="Ex. Programmateurs – automne 2026"></div><div class="notice">Les adresses valides seront ajoutées à l’onglet « Listes emails », dans la colonne « email google ».</div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-email-list">Créer la liste</button></div></form></div>`;
+      modalRoot.innerHTML = `<div class="modal narrow"><div class="modal-header"><div><h2>Créer une liste d’emails</h2><p>${state.selected.size} contact(s) sélectionné(s).</p></div><button class="close-button" type="button" data-action="close-modal">×</button></div><form id="email-form"><div class="modal-body"><div class="form-field"><label>Nom de la liste</label><input class="control" name="listName" placeholder="Ex. Programmateurs – automne 2026"></div><div class="notice">Les adresses valides seront ajoutées à l’onglet « Listes emails », dans la colonne « email google ».</div></div><div class="save-feedback" data-save-feedback aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-email-list">Créer la liste</button></div></form></div>`;
       modalRoot.classList.add('open');
       bindModalSubmit('email-form');
+      bindModalSaveButton('email-form', 'save-email-list');
     }
 
     function bindModalSubmit(formId) {
       const form = document.getElementById(formId);
       if (form) form.addEventListener('submit', handleModalSubmit);
+    }
+
+    function bindModalSaveButton(formId, action) {
+      const button = document.querySelector(`#${formId} [data-action="${action}"]`);
+      if (button) button.addEventListener('click', () => submitModalForm(formId));
     }
 
     function closeModal() { modalRoot.classList.remove('open'); modalRoot.innerHTML = ''; }
@@ -466,7 +478,15 @@
 
     function submitModalForm(formId) {
       const form = document.getElementById(formId);
-      if (!form || !form.reportValidity()) return;
+      if (!form) return;
+      if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+        notify('Vérifie les champs obligatoires avant d’enregistrer.', true);
+        return;
+      }
+      if (typeof form.reportValidity !== 'function' && !form.checkValidity()) {
+        notify('Vérifie les champs obligatoires avant d’enregistrer.', true);
+        return;
+      }
       handleModalSubmit({ target: form, preventDefault: function () {} });
     }
 
@@ -521,6 +541,7 @@
       event.preventDefault();
       const button = form.querySelector('button[type="submit"], button[data-action^="save-"]');
       setBusy(button, true, 'Enregistrement…');
+      setSaveFeedback(form, 'Enregistrement dans le Google Sheet…');
       try {
         const values = new FormData(form);
         if (form.id === 'contact-form') {
@@ -533,6 +554,7 @@
           };
           await callServer('saveContact', contact);
           button.textContent = 'Actualisation…';
+          setSaveFeedback(form, 'Enregistrement effectué. Actualisation de la liste…', 'success');
           const refreshed = await loadData();
           closeModal();
           notify(refreshed ? 'La fiche contact a été enregistrée et la liste actualisée.' : 'La fiche est enregistrée, mais la liste n’a pas pu être actualisée. Rechargez la page.', !refreshed);
@@ -540,6 +562,7 @@
         if (form.id === 'show-form') {
           await callServer('saveSpectacle', { id: values.get('id'), nom: values.get('nom'), compagnie: values.get('compagnie'), categorie: values.get('categorie'), commentaires: values.get('commentaires') });
           button.textContent = 'Actualisation…';
+          setSaveFeedback(form, 'Enregistrement effectué. Actualisation de la liste…', 'success');
           const refreshed = await loadData();
           closeModal();
           notify(refreshed ? 'La fiche spectacle a été enregistrée et la liste actualisée.' : 'La fiche est enregistrée, mais la liste n’a pas pu être actualisée. Rechargez la page.', !refreshed);
@@ -548,21 +571,28 @@
           const result = await callServer('createEmailList', [...state.selected], values.get('listName'));
           closeModal(); state.selected.clear(); render(); notify(`${result.count} email(s) ajoutés à « ${result.listName} ».`);
         }
-      } catch (error) { notify(error.message, true); if (button) { button.disabled = false; button.textContent = 'Réessayer'; } }
+      } catch (error) {
+        setSaveFeedback(form, error.message || String(error), 'error');
+        notify(error.message || String(error), true);
+        if (button) { button.disabled = false; button.textContent = 'Réessayer'; }
+      }
     }
 
     function handleModalClick(event) {
       if (event.target === modalRoot || event.target.closest('[data-action="close-modal"]')) { closeModal(); return; }
-      const action = event.target.closest('[data-action]')?.dataset.action;
-      if (action === 'save-contact') submitModalForm('contact-form');
-      if (action === 'save-show') submitModalForm('show-form');
-      if (action === 'save-email-list') submitModalForm('email-form');
     }
 
     function notify(message, error = false) {
       const toast = document.getElementById('toast');
       toast.textContent = message; toast.classList.toggle('error', error); toast.classList.add('show');
       clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 3900);
+    }
+
+    function setSaveFeedback(form, message, kind = '') {
+      const element = form.querySelector('[data-save-feedback]');
+      if (!element) return;
+      element.textContent = message;
+      element.className = `save-feedback visible${kind ? ` ${kind}` : ''}`;
     }
 
     function setBusy(button, busy, label) { if (!button) return; if (busy) { button.dataset.previous = button.textContent; button.disabled = true; button.textContent = label; } else { button.disabled = false; button.textContent = button.dataset.previous || label; } }

@@ -11,6 +11,10 @@ Application web Google Apps Script pour gérer un carnet de contacts culturels e
 
 L’application est configurée pour le compte qui la déploie uniquement (`MYSELF`) et s’exécute avec les autorisations du déployeur. Au premier chargement, elle crée les onglets `Contacts`, `Spectacles` et `Listes emails`, avec leurs en-têtes. Pour utiliser un projet lié à un Sheet, ouvrez-le depuis **Extensions → Apps Script** ; il se connecte automatiquement à ce fichier.
 
+## Documentation technique
+
+Les parcours utilisateur et les chaînes d’appels jusqu’aux accès Google Sheets sont décrits dans [docs/parcours-utilisateur.adoc](docs/parcours-utilisateur.adoc). Le document inclut des diagrammes Mermaid en syntaxe AsciiDoc.
+
 ## Données gérées
 
 - **Contacts** : identité, coordonnées, ville, département, structure, publics programmés, commentaires et note. Les spectacles vus et programmés sont conservés par identifiant de spectacle.
