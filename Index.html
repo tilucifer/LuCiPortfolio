@@ -537,14 +537,15 @@
 
     async function handleModalSubmit(event) {
       const form = event.target;
-      if (!['contact-form', 'show-form', 'email-form'].includes(form.getAttribute("id"))) return;
+      const elementId = form.getAttribute("id")
+      if (!['contact-form', 'show-form', 'email-form'].includes(elementId)) return;
       event.preventDefault();
       const button = form.querySelector('button[type="submit"], button[data-action^="save-"]');
       setBusy(button, true, 'Enregistrement…');
       setSaveFeedback(form, 'Enregistrement dans le Google Sheet…');
       try {
         const values = new FormData(form);
-        if (form.id === 'contact-form') {
+        if (elementId === 'contact-form') {
           const contact = {
             id: values.get('id'), civilite: values.get('civilite'), prenom: values.get('prenom'), nom: values.get('nom'), email: values.get('email'),
             telephone: values.get('telephone'), ville: values.get('ville'), departement: values.get('departement'), company: values.get('company'),
@@ -559,7 +560,7 @@
           closeModal();
           notify(refreshed ? 'La fiche contact a été enregistrée et la liste actualisée.' : 'La fiche est enregistrée, mais la liste n’a pas pu être actualisée. Rechargez la page.', !refreshed);
         }
-        if (form.id === 'show-form') {
+        if (elementId === 'show-form') {
           await callServer('saveSpectacle', { id: values.get('id'), nom: values.get('nom'), compagnie: values.get('compagnie'), categorie: values.get('categorie'), commentaires: values.get('commentaires') });
           button.textContent = 'Actualisation…';
           setSaveFeedback(form, 'Enregistrement effectué. Actualisation de la liste…', 'success');
@@ -567,7 +568,7 @@
           closeModal();
           notify(refreshed ? 'La fiche spectacle a été enregistrée et la liste actualisée.' : 'La fiche est enregistrée, mais la liste n’a pas pu être actualisée. Rechargez la page.', !refreshed);
         }
-        if (form.id === 'email-form') {
+        if (elementId === 'email-form') {
           const result = await callServer('createEmailList', [...state.selected], values.get('listName'));
           closeModal(); state.selected.clear(); render(); notify(`${result.count} email(s) ajoutés à « ${result.listName} ».`);
         }
