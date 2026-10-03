@@ -537,7 +537,7 @@
 
     async function handleModalSubmit(event) {
       const form = event.target;
-      if (!['contact-form', 'show-form', 'email-form'].includes(form.id)) return;
+      if (!['contact-form', 'show-form', 'email-form'].includes(form.getAttribute("id"))) return;
       event.preventDefault();
       const button = form.querySelector('button[type="submit"], button[data-action^="save-"]');
       setBusy(button, true, 'Enregistrement…');
