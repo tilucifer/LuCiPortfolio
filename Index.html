@@ -413,7 +413,7 @@
           <div class="form-field full"><div class="show-pickers"><div class="picker-box"><p class="picker-title">Spectacles vus</p><div class="picker-list">${seenOptions}</div></div><div class="picker-box"><p class="picker-title">Spectacles programmés</p><div class="picker-list">${programmedOptions}</div></div></div></div>
           <div class="form-field full"><label>Commentaires</label><textarea class="textarea-control" name="commentaires" placeholder="Informations utiles sur ce contact…">${escapeHtml(contact.commentaires || '')}</textarea></div>
           <div class="form-field full"><label>Note</label><textarea class="textarea-control" name="note" placeholder="Note personnelle…">${escapeHtml(contact.note || '')}</textarea></div>
-        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="submit">${editing ? 'Enregistrer les modifications' : 'Créer le contact'}</button></div></form></div>`;
+        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-contact">${editing ? 'Enregistrer les modifications' : 'Créer le contact'}</button></div></form></div>`;
       modalRoot.classList.add('open');
       bindModalSubmit('contact-form');
     }
@@ -432,13 +432,13 @@
           <div class="form-field full"><label>Nom de la compagnie</label><input class="control" name="compagnie" value="${escapeAttr(show.compagnie || '')}" placeholder="Compagnie"></div>
           <div class="form-field full"><label>Catégorie</label><select class="select-control" name="categorie"><option value="">Choisir une catégorie…</option>${['Jeune public', 'Adultes', 'Rue', 'Tout public', 'Autre'].map(category => `<option ${show.categorie === category ? 'selected' : ''}>${category}</option>`).join('')}</select></div>
           <div class="form-field full"><label>Commentaires</label><textarea class="textarea-control" name="commentaires" placeholder="Informations sur le spectacle…">${escapeHtml(show.commentaires || '')}</textarea></div>
-        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="submit">${editing ? 'Enregistrer' : 'Créer le spectacle'}</button></div></form></div>`;
+        </div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-show">${editing ? 'Enregistrer' : 'Créer le spectacle'}</button></div></form></div>`;
       modalRoot.classList.add('open');
       bindModalSubmit('show-form');
     }
 
     function openEmailModal() {
-      modalRoot.innerHTML = `<div class="modal narrow"><div class="modal-header"><div><h2>Créer une liste d’emails</h2><p>${state.selected.size} contact(s) sélectionné(s).</p></div><button class="close-button" type="button" data-action="close-modal">×</button></div><form id="email-form"><div class="modal-body"><div class="form-field"><label>Nom de la liste</label><input class="control" name="listName" placeholder="Ex. Programmateurs – automne 2026"></div><div class="notice">Les adresses valides seront ajoutées à l’onglet « Listes emails », dans la colonne « email google ».</div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="submit">Créer la liste</button></div></form></div>`;
+      modalRoot.innerHTML = `<div class="modal narrow"><div class="modal-header"><div><h2>Créer une liste d’emails</h2><p>${state.selected.size} contact(s) sélectionné(s).</p></div><button class="close-button" type="button" data-action="close-modal">×</button></div><form id="email-form"><div class="modal-body"><div class="form-field"><label>Nom de la liste</label><input class="control" name="listName" placeholder="Ex. Programmateurs – automne 2026"></div><div class="notice">Les adresses valides seront ajoutées à l’onglet « Listes emails », dans la colonne « email google ».</div></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Annuler</button><button class="button" type="button" data-action="save-email-list">Créer la liste</button></div></form></div>`;
       modalRoot.classList.add('open');
       bindModalSubmit('email-form');
     }
@@ -462,6 +462,12 @@
       if (action === 'edit-show') { const show = state.spectacles.find(item => item.id === button.dataset.id); if (show) openShowModal(show); }
       if (action === 'email-list') openEmailModal();
       if (action === 'clear-selection') { state.selected.clear(); renderContactRows(); }
+    }
+
+    function submitModalForm(formId) {
+      const form = document.getElementById(formId);
+      if (!form || !form.reportValidity()) return;
+      handleModalSubmit({ target: form, preventDefault: function () {} });
     }
 
     function handleMainInput(event) {
@@ -513,7 +519,7 @@
       const form = event.target;
       if (!['contact-form', 'show-form', 'email-form'].includes(form.id)) return;
       event.preventDefault();
-      const button = form.querySelector('button[type="submit"]');
+      const button = form.querySelector('button[type="submit"], button[data-action^="save-"]');
       setBusy(button, true, 'Enregistrement…');
       try {
         const values = new FormData(form);
@@ -546,7 +552,11 @@
     }
 
     function handleModalClick(event) {
-      if (event.target === modalRoot || event.target.closest('[data-action="close-modal"]')) closeModal();
+      if (event.target === modalRoot || event.target.closest('[data-action="close-modal"]')) { closeModal(); return; }
+      const action = event.target.closest('[data-action]')?.dataset.action;
+      if (action === 'save-contact') submitModalForm('contact-form');
+      if (action === 'save-show') submitModalForm('show-form');
+      if (action === 'save-email-list') submitModalForm('email-form');
     }
 
     function notify(message, error = false) {
