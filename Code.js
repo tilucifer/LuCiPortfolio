@@ -61,6 +61,12 @@ function saveContact(contact) {
     phase = 'recherche du contact';
     const existing = findRecord_(SHEETS.contacts, 'ID', id);
     const now = new Date();
+    const spectaclesVus = Object.prototype.hasOwnProperty.call(record, 'spectaclesVus')
+      ? stringArray_(record.spectaclesVus)
+      : existing ? parseArray_(existing['Spectacles vus']) : [];
+    const spectaclesProgrammes = Object.prototype.hasOwnProperty.call(record, 'spectaclesProgrammes')
+      ? stringArray_(record.spectaclesProgrammes)
+      : existing ? parseArray_(existing['Spectacles programmés']) : [];
     const values = {
       'ID': id,
       'Civilité': clean_(record.civilite),
@@ -71,8 +77,8 @@ function saveContact(contact) {
       'Ville': clean_(record.ville),
       'Département': clean_(record.departement),
       'Company': clean_(record.company),
-      'Spectacles vus': JSON.stringify(stringArray_(record.spectaclesVus)),
-      'Spectacles programmés': JSON.stringify(stringArray_(record.spectaclesProgrammes)),
+      'Spectacles vus': JSON.stringify(spectaclesVus),
+      'Spectacles programmés': JSON.stringify(spectaclesProgrammes),
       'Programme jeune public': record.jeunePublic ? 'Oui' : 'Non',
       'Programme adulte': record.adulte ? 'Oui' : 'Non',
       'Programme de rue': record.rue ? 'Oui' : 'Non',

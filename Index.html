@@ -425,7 +425,7 @@
 
     function showPickerList(contact, kind) {
       const key = kind === 'seen' ? 'spectaclesVus' : 'spectaclesProgrammes';
-      const attribute = kind === 'seen' ? 'showSeen' : 'showProgrammed';
+      const attribute = kind === 'seen' ? 'show-seen' : 'show-programmed';
       return state.spectacles.map(show => `<label class="check-option"><input class="checkbox" type="checkbox" data-${attribute}="${escapeAttr(show.id)}" ${((contact[key] || []).includes(show.id)) ? 'checked' : ''}>${escapeHtml(show.nom)}</label>`).join('');
     }
 
